@@ -1,2 +1,4 @@
 # Ignore "settings.json" file
 settings.json
+kaggle.json
+*.h5
