@@ -9,9 +9,12 @@ import google.generativeai as genai
 from google.generativeai.types import GenerationConfig
 import time
 
+# Streamlit UI - set page config as the first streamlit command
+st.set_page_config(page_title="Plant Disease Detection", page_icon="🌿", layout="wide")
+
 # Configuration and Setup
 working_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = f"{working_dir}/trained_model/plant_disease_prediction_model.h5"
+model_path = f"{working_dir}/plant_disease_prediction_model.h5"
 
 # Initialize session state
 if 'chat_history' not in st.session_state:
@@ -96,9 +99,6 @@ def add_message(role, content):
     message_id = int(time.time() * 1000)  # Millisecond timestamp for uniqueness
     st.session_state.chat_history.append((role, content, message_id))
     st.session_state.message_count += 1
-
-# Streamlit UI
-st.set_page_config(page_title="Plant Disease Detection", page_icon="🌿", layout="wide")
 
 # Background Animation and Styling
 st.markdown("""
