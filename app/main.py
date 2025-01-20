@@ -33,7 +33,7 @@ except Exception as e:
 
 # Configure Gemini AI
 try:
-    genai.configure(api_key="AIzaSyDJrGXyZFgDPAXi5VUNu0YiAYyrY3bXnjY")
+    genai.configure(api_key="API-KEY")
     config = GenerationConfig(
         temperature=0.9,
         top_p=0.95,
