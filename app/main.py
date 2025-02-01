@@ -21,6 +21,10 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 if 'message_count' not in st.session_state:
     st.session_state.message_count = 0
+if 'past' not in st.session_state:
+    st.session_state.past = []
+if 'generated' not in st.session_state:
+    st.session_state.generated = []
 
 # Load the model with error handling
 try:
@@ -33,7 +37,7 @@ except Exception as e:
 
 # Configure Gemini AI
 try:
-    genai.configure(api_key="AIzaSyDJrGXyZFgDPAXi5VUNu0YiAYyrY3bXnjY")
+    genai.configure(api_key="")
     config = GenerationConfig(
         temperature=0.9,
         top_p=0.95,
@@ -94,11 +98,15 @@ def get_chatbot_response(query, disease=None):
     except Exception as e:
         return f"I apologize, but I'm having trouble generating a response: {str(e)}"
 
-def add_message(role, content):
-    """Add a message to chat history with a unique timestamp-based ID"""
-    message_id = int(time.time() * 1000)  # Millisecond timestamp for uniqueness
-    st.session_state.chat_history.append((role, content, message_id))
-    st.session_state.message_count += 1
+def on_input_change():
+    user_input = st.session_state.user_input
+    st.session_state.past.append(user_input)
+    response = get_chatbot_response(user_input)
+    st.session_state.generated.append(response)
+
+def on_btn_click():
+    st.session_state.past = []
+    st.session_state.generated = []
 
 # Background Animation and Styling
 st.markdown("""
@@ -142,19 +150,9 @@ st.markdown("""
                     rgba(145, 233, 255, 0.2)
                 );
         }
-
-        /* Add more CSS styles from the uploaded file here */
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-    <div class="night"></div>
-    <div class="flowers">
-        <!-- Add the full HTML for animations from the uploaded file here -->
-    </div>
-""", unsafe_allow_html=True)
-
-# Title and Introduction
 st.title("🌿 Plant Disease Detection & Assistant 🌿")
 st.markdown("""
     Welcome to the Plant Disease Detection tool! Upload a leaf image to detect the disease and interact with the assistant for treatment advice.
@@ -169,11 +167,11 @@ st.markdown("""
 uploaded_image = st.file_uploader("Upload a plant leaf image...", type=["jpg", "jpeg", "png"])
 if uploaded_image is not None:
     image = Image.open(uploaded_image)
-    col1, col2 = st.columns([2, 4])  # Smaller column for the image
-    
+    col1, col2 = st.columns([2, 4])
+
     with col1:
         st.image(image, caption="Uploaded Image", use_column_width=True)
-    
+
     with col2:
         analyze_button = st.button('Analyze Disease')
         if analyze_button:
@@ -182,65 +180,18 @@ if uploaded_image is not None:
 
             if prediction != "Cannot identify":
                 st.success(f'✅ Detected Disease: {prediction}!')
-                chatbot_response = get_chatbot_response("", disease=prediction)
-                add_message("bot", chatbot_response)
+                response = get_chatbot_response("", disease=prediction)
+                st.session_state.past.append(f"Detected Disease: {prediction}")
+                st.session_state.generated.append(response)
             else:
                 st.warning("⚠️ Could not identify the disease. Please try another image.")
 
-# Floating Chat UI (Side panel)
-st.markdown('<div id="chat-panel" class="chat-container">', unsafe_allow_html=True)
-st.subheader("💬 Chat with Assistant")
+# Chat Interface
+chat_placeholder = st.empty()
+with chat_placeholder.container():
+    for i in range(len(st.session_state.generated)):
+        message(st.session_state.past[i], is_user=True, key=f"{i}_user")
+        message(st.session_state.generated[i], key=f"{i}_bot")
 
-# Display chat messages
-for role, content, msg_id in st.session_state.chat_history:
-    if role == "user":
-        st.markdown(f'<div class="message user-message">{content}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div class="message bot-message">{content}</div>', unsafe_allow_html=True)
-
-# Chat Input and Buttons
-st.markdown('<div style="margin-top: 15px;">', unsafe_allow_html=True)
-user_input_col1, user_input_col2 = st.columns([4, 1])
-with user_input_col1:
-    user_input = st.text_input("Ask about plant diseases:", key="user_input")
-
-# Buttons
-with user_input_col2:
-    send_button = st.button("Send")
-    clear_button = st.button("Clear Chat 🧹")
-
-# Chat actions
-if send_button:
-    if user_input:
-        add_message("user", user_input)
-        response = get_chatbot_response(user_input)
-        add_message("bot", response)
-        st.rerun()
-if clear_button:
-    st.session_state.chat_history = []
-    st.session_state.message_count = 0
-    st.rerun()
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Floating Chat Button (to open/close panel)
-st.markdown("""
-    <script>
-        const chatButton = document.createElement('button');
-        chatButton.innerHTML = '💬 Chat with Assistant';
-        chatButton.style.position = 'fixed';
-        chatButton.style.bottom = '20px';
-        chatButton.style.right = '20px';
-        chatButton.style.padding = '10px';
-        chatButton.style.fontSize = '16px';
-        chatButton.style.borderRadius = '8px';
-        chatButton.style.backgroundColor = '#4CAF50';
-        chatButton.style.color = 'white';
-        document.body.appendChild(chatButton);
-        
-        chatButton.onclick = function() {
-            const chatPanel = document.getElementById('chat-panel');
-            chatPanel.classList.toggle('active');
-        }
-    </script>
-""", unsafe_allow_html=True)
+st.text_input("User Input:", on_change=on_input_change, key="user_input")
+st.button("Clear Chat 🪮", on_click=on_btn_click)
